@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import com.diego.molina.processors.BodyIntoListProcessor;
+import com.diego.molina.processors.ObjectTemplateProcessor;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,10 @@ public class MainRoute extends RouteBuilder{
 
 	@Value("${api.url.predict-age}")
 	String predictAgeUrl;
+
+
+	@Value("${return-template}")
+	String returnTemplate;
 
 	@Autowired
 	private Environment env;
@@ -84,6 +89,14 @@ public class MainRoute extends RouteBuilder{
 					.log("Current person: ${exchangeProperty.currentPerson}")
 					.to("direct:getGenderRoute")
 					.to("direct:getAgeRoute")
+					.to("direct:buildObjectStep")
+				.end()
+		.end();
+
+		from("direct:buildObjectStep").routeId("buildObjectStep").streamCaching()
+				.setBody(constant(returnTemplate))
+				.process(new ObjectTemplateProcessor())
+				.log("New body with unified data: ${body}")
 		.end();
 
 		from("direct:getGenderRoute").routeId("getGenderRoute").streamCaching()
@@ -114,9 +127,12 @@ public class MainRoute extends RouteBuilder{
 						.setProperty("personAge", body())
 					.endChoice()
 					.otherwise()
-						.log("Problem accessing to gender guessing API")
+						.log("Problem accessing to age guessing API")
 					.end()
 		.end();
+
+
+
 
 
 		/*
@@ -125,7 +141,7 @@ public class MainRoute extends RouteBuilder{
 		 */		
 		from("direct:finishProcess").routeId("finishProcess")
 			.removeHeaders("*")
-			.setBody(constant("END OF THE PROCESS"))
+			.setBody(constant("END OF THE DEMO"))
 			.to(createFile)
 		.end();
 	}

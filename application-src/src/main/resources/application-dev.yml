@@ -19,3 +19,12 @@ api:
     predict-gender: "https://api.genderize.io?name=::NAME::"
     random-name: "https://namey.muffinlabs.com/name.json?count=10&with_surname=false&frequency=common"
     predict-age: "https://api.agify.io?name=::NAME::"
+
+
+######### MISC DATA #############
+return-template: '{
+    "name": "::NAME::",
+    "age": ::AGE::,
+    "gender": "::GENDER::",
+    "gender_probability": ::GENDER_PROB::
+}'
