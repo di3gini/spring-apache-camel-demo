@@ -1,0 +1,15 @@
+#######GENERAL#############
+server:
+  port: 8085
+camel:
+  springboot:
+    name: apache-camel-demo
+    main-run-controller: true
+quartz:
+  retrieve:
+    demo-once: "timer://runOnce?repeatCount=1&delay=5000"
+    demo-cron: "quartz://baseProjectGroup/baseProjectJob?cron=0+0/1+*+*+*+?+*"
+finish-process:
+  create-file: "file://C:/test/?fileName=terminated"
+
+##########  API ###############
