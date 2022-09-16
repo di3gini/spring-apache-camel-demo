@@ -4,8 +4,11 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+import com.diego.molina.processors.BodyIntoListProcessor;
 import org.apache.camel.builder.RouteBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,6 +31,8 @@ public class MainRoute extends RouteBuilder{
 	@Value("${api.url.predict-age}")
 	String predictAgeUrl;
 
+	@Autowired
+	private Environment env;
 
 	private final static String DUMMY_URL        = "https://dummyurl?throwExceptionOnFailure=false";
 	private final static String JDBC_URL         = "jdbc:dataSource?useHeadersAsParameters=true";
@@ -53,7 +58,7 @@ public class MainRoute extends RouteBuilder{
 
 
 
-		from("direct:getNamesRoute").routeId("getNamesRoute")
+		from("direct:getNamesRoute").routeId("getNamesRoute").streamCaching()
 				.removeHeaders("*")
 				.log("Names url: " + randomNameUrl)
 				.setHeader(CAMEL_HTTP_METHOD, constant("GET"))
@@ -62,14 +67,58 @@ public class MainRoute extends RouteBuilder{
 				.choice()
 					.when(simple(IS_OK_HTTPCODE))
 						.log("Got a 200 response from the server")
-						.log("Body got: ${body}")
+						.log("Body response: ${body}")
+						.process(new BodyIntoListProcessor())
+						.log("Body processed: ${body}")
+						.to("direct:getGenderAndAgeStep")
 					.endChoice()
 					.otherwise()
-						.log("Error accesing API for names")
+						.log("Error accessing API for names")
 				.end()
 		.end();
 
-		
+		from("direct:getGenderAndAgeStep").routeId("getGenderAndAgeRoute").streamCaching()
+				.log("Splitting data to process each member")
+				.split(body()).stopOnException()
+					.setProperty("currentPerson", body())
+					.log("Current person: ${exchangeProperty.currentPerson}")
+					.to("direct:getGenderRoute")
+					.to("direct:getAgeRoute")
+		.end();
+
+		from("direct:getGenderRoute").routeId("getGenderRoute").streamCaching()
+				.log("Get gender for: ${exchangeProperty.currentPerson}")
+				.removeHeaders("*")
+				.setHeader(CAMEL_HTTP_METHOD, constant("GET"))
+				.setHeader(CAMEL_HTTP_URI, simple(env.getProperty("api.url.predict-gender").replace( "::NAME::", "${exchangeProperty.currentPerson}")))
+				.to(DUMMY_URL)
+				.choice()
+					.when(simple(IS_OK_HTTPCODE))
+						.log("New body for gender: ${body}")
+						.setProperty("personGender", body())
+					.endChoice()
+					.otherwise()
+						.log("Problem accessing to gender guessing API")
+				.end()
+		.end();
+
+		from("direct:getAgeRoute").routeId("getAgeRoute").streamCaching()
+				.log("Get age for: ${exchangeProperty.currentPerson}")
+				.removeHeaders("*")
+				.setHeader(CAMEL_HTTP_METHOD, constant("GET"))
+				.setHeader(CAMEL_HTTP_URI, simple(predictAgeUrl.replace( "::NAME::", "${exchangeProperty.currentPerson}")))
+				.to(DUMMY_URL)
+					.choice()
+					.when(simple(IS_OK_HTTPCODE))
+						.log("New body for age: ${body}")
+						.setProperty("personAge", body())
+					.endChoice()
+					.otherwise()
+						.log("Problem accessing to gender guessing API")
+					.end()
+		.end();
+
+
 		/*
 		 * This route creates a file in /tmp/pod/ in order to demote all the containers associated to this process and save resources,
 		 * this route is been called as the last step in the integration

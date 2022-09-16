@@ -17,5 +17,5 @@ finish-process:
 api:
   url:
     predict-gender: "https://api.genderize.io?name=::NAME::"
-    random-name: "https://namey.muffinlabs.com/name.json?count=10&with_surname=true&frequency=common"
+    random-name: "https://namey.muffinlabs.com/name.json?count=10&with_surname=false&frequency=common"
     predict-age: "https://api.agify.io?name=::NAME::"
