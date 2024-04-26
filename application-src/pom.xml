@@ -80,7 +80,7 @@
 		<dependency>
 			<groupId>org.apache.camel.springboot</groupId>
 			<artifactId>camel-servlet-starter</artifactId>
-			<version>3.0.0</version>
+			<version>3.22.1</version>
 		</dependency>
 
 
